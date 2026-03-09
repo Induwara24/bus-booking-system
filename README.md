@@ -24,7 +24,7 @@ A lightweight, full-stack web application that allows passengers to view availab
 
 ## 📂 Project Structure
 
-\`\`\`text
+```text
 bus-booking-system/
 │
 ├── backend/                  # API and Database logic
@@ -37,7 +37,7 @@ bus-booking-system/
 └── frontend/                 # User Interface
     ├── index.html            # Passenger booking portal
     └── admin.html            # Admin management dashboard
-\`\`\`
+```
 
 ## ⚙️ Local Setup & Installation
 
@@ -50,30 +50,30 @@ cd bus-booking-system
 ### 2. Database Setup
 1. Ensure you have a local MySQL server running.
 2. Create a new database named `bus_booking_db`:
-   \`\`\`sql
+   ```sql
    CREATE DATABASE bus_booking_db;
-   \`\`\`
+   ```
 3. Update the `SQLALCHEMY_DATABASE_URL` in `backend/database.py` with your MySQL credentials.
 
 ### 3. Backend Setup
 1. Navigate to the backend directory:
-   \`\`\`bash
+   ```bash
    cd backend
-   \`\`\`
+   ```
 2. Create and activate a virtual environment:
-   \`\`\`bash
+   ```bash
    python -m venv venv
    venv\Scripts\activate   # On Windows
    source venv/bin/activate  # On macOS/Linux
-   \`\`\`
+   ```
 3. Install the dependencies:
-   \`\`\`bash
+   ```bash
    pip install -r requirements.txt
-   \`\`\`
+   ```
 4. Run the FastAPI server:
-   \`\`\`bash
+   ```bash
    uvicorn main:app --reload
-   \`\`\`
+   ```
    *The server will start at `http://127.0.0.1:8000` and automatically create the necessary database tables.*
 
 ### 4. Frontend Setup
