@@ -42,10 +42,10 @@ bus-booking-system/
 ## ⚙️ Local Setup & Installation
 
 ### 1. Clone the Repository
-\`\`\`bash
+```bash
 git clone https://github.com/Induwara24/bus-booking-system.git
 cd bus-booking-system
-\`\`\`
+```
 
 ### 2. Database Setup
 1. Ensure you have a local MySQL server running.
