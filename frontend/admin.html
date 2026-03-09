@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Bus Bookings</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #007bff; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        
+        .status-Confirmed { color: green; font-weight: bold; }
+        .status-Cancelled { color: red; font-weight: bold; }
+        
+        button { padding: 5px 10px; border: none; cursor: pointer; font-weight: bold; border-radius: 3px; }
+        .cancel-btn { background-color: #dc3545; color: white; }
+        .cancel-btn:hover { background-color: #c82333; }
+        
+        #message { margin-top: 15px; padding: 10px; border-radius: 5px; display: none; background-color: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+
+    <h1>Admin Dashboard - All Bookings</h1>
+    <div id="message"></div>
+    
+    <table id="bookingsTable">
+        <thead>
+            <tr>
+                <th>Booking ID</th>
+                <th>Bus ID</th>
+                <th>Seat No.</th>
+                <th>Passenger Name</th>
+                <th>Phone Number</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        window.onload = fetchAllBookings;
+
+        async function fetchAllBookings() {
+            try {
+                const response = await fetch(`${API_URL}/admin/bookings`);
+                const bookings = await response.json();
+                const tbody = document.querySelector('#bookingsTable tbody');
+                tbody.innerHTML = ''; // Clear table
+
+                bookings.forEach(booking => {
+                    const row = document.createElement('tr');
+                    
+                    // Create Action Button (Only show Cancel if currently Confirmed)
+                    let actionHtml = '';
+                    if (booking.status === 'Confirmed') {
+                        actionHtml = `<button class="cancel-btn" onclick="updateStatus(${booking.id}, 'Cancelled')">Cancel Booking</button>`;
+                    }
+
+                    row.innerHTML = `
+                        <td><strong>${booking.booking_reference}</strong></td>
+                        <td>${booking.bus_id}</td>
+                        <td>${booking.seat_number}</td>
+                        <td>${booking.passenger_name}</td>
+                        <td>${booking.passenger_phone}</td>
+                        <td class="status-${booking.status}">${booking.status}</td>
+                        <td>${actionHtml}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error("Error fetching bookings:", error);
+            }
+        }
+
+        async function updateStatus(bookingId, newStatus) {
+            if (!confirm(`Are you sure you want to mark this booking as ${newStatus}?`)) return;
+
+            try {
+                // Notice the ?status= query parameter matching our FastAPI endpoint
+                const response = await fetch(`${API_URL}/admin/bookings/${bookingId}/status?status=${newStatus}`, {
+                    method: 'PUT'
+                });
+
+                if (response.ok) {
+                    const msgDiv = document.getElementById('message');
+                    msgDiv.textContent = `Booking successfully updated to ${newStatus}.`;
+                    msgDiv.style.display = 'block';
+                    setTimeout(() => { msgDiv.style.display = 'none'; }, 3000);
+                    
+                    // Refresh the table
+                    fetchAllBookings();
+                } else {
+                    alert("Failed to update status.");
+                }
+            } catch (error) {
+                console.error("Error updating status:", error);
+            }
+        }
+    </script>
+
+</body>
+</html>

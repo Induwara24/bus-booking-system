@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Seat Booking</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { display: flex; gap: 40px; }
+        .form-section { flex: 1; }
+        .seat-section { flex: 1; text-align: center; }
+        
+        select, input, button { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 20px; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        
+        /* 2x2 Seat Layout Grid */
+        .bus-layout { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr 20px 1fr 1fr; /* 2 seats, gap for aisle, 2 seats */
+            gap: 10px; 
+            background: #f4f4f4; 
+            padding: 20px; 
+            border-radius: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .seat { 
+            padding: 15px 0; 
+            border-radius: 5px; 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            user-select: none;
+        }
+        
+        .aisle { width: 20px; } /* Empty space for the aisle */
+        
+        .available { background-color: #28a745; } /* Green for available */
+        .available:hover { opacity: 0.8; }
+        
+        .booked { background-color: #dc3545; cursor: not-allowed; } /* Red for booked */
+        
+        .selected { background-color: #ffc107; color: black; border: 2px solid #333; } /* Yellow for user selection */
+        
+        #message { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+    <h1>Bus Seat Booking</h1>
+    
+    <div class="container">
+        <div class="form-section">
+            <h3>1. Select Travel Details</h3>
+            <label>Select Route:</label>
+            <select id="routeSelect" onchange="fetchBuses()">
+                <option value="">-- Choose a Route --</option>
+            </select>
+
+            <label>Select Bus (Date & Time):</label>
+            <select id="busSelect" onchange="fetchSeats()" disabled>
+                <option value="">-- Choose a Bus --</option>
+            </select>
+
+            <h3>3. Passenger Details</h3>
+            <label>Full Name:</label>
+            <input type="text" id="passengerName" placeholder="Enter your name">
+            
+            <label>Phone Number:</label>
+            <input type="text" id="passengerPhone" placeholder="Enter phone number">
+            
+            <button onclick="bookSeat()">Confirm Booking</button>
+            
+            <div id="message"></div>
+        </div>
+
+        <div class="seat-section">
+            <h3>2. Select a Seat</h3>
+            <p>Selected Seat: <strong id="selectedSeatDisplay">None</strong></p>
+            <div id="seatLayout" class="bus-layout">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let currentSelectedSeat = null;
+
+        // Fetch routes when page loads
+        window.onload = async () => {
+            const response = await fetch(`${API_URL}/routes`);
+            const routes = await response.json();
+            const routeSelect = document.getElementById('routeSelect');
+            
+            routes.forEach(route => {
+                const option = document.createElement('option');
+                option.value = route.id;
+                option.textContent = `${route.origin} to ${route.destination}`;
+                routeSelect.appendChild(option);
+            });
+        };
+
+        // Fetch buses when a route is selected
+        async function fetchBuses() {
+            const routeId = document.getElementById('routeSelect').value;
+            const busSelect = document.getElementById('busSelect');
+            busSelect.innerHTML = '<option value="">-- Choose a Bus --</option>';
+            document.getElementById('seatLayout').innerHTML = ''; // Clear seats
+            currentSelectedSeat = null;
+            updateSeatDisplay();
+
+            if (!routeId) {
+                busSelect.disabled = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/routes/${routeId}/buses`);
+                if (!response.ok) throw new Error("No buses available");
+                
+                const buses = await response.json();
+                buses.forEach(bus => {
+                    const option = document.createElement('option');
+                    option.value = bus.id;
+                    option.textContent = `Date: ${bus.travel_date} | Time: ${bus.departure_time}`;
+                    busSelect.appendChild(option);
+                });
+                busSelect.disabled = false;
+            } catch (error) {
+                showMessage(error.message, "error");
+            }
+        }
+
+        // Fetch and draw seats when a bus is selected
+        async function fetchSeats() {
+            const busId = document.getElementById('busSelect').value;
+            const seatLayout = document.getElementById('seatLayout');
+            seatLayout.innerHTML = '';
+            currentSelectedSeat = null;
+            updateSeatDisplay();
+
+            if (!busId) return;
+
+            // Fetch which seats are already booked
+            const response = await fetch(`${API_URL}/buses/${busId}/seats`);
+            const data = await response.json();
+            const bookedSeats = data.booked_seats;
+
+            // Generate 40 seats in a 2x2 layout
+            for (let i = 1; i <= 40; i++) {
+                const seatDiv = document.createElement('div');
+                seatDiv.textContent = i;
+                
+                if (bookedSeats.includes(i)) {
+                    seatDiv.className = 'seat booked';
+                } else {
+                    seatDiv.className = 'seat available';
+                    seatDiv.onclick = () => selectSeat(i, seatDiv);
+                }
+                
+                seatLayout.appendChild(seatDiv);
+
+                // Add an empty div to act as the aisle after every 2nd seat in a row
+                if (i % 4 === 2) {
+                    const aisleDiv = document.createElement('div');
+                    aisleDiv.className = 'aisle';
+                    seatLayout.appendChild(aisleDiv);
+                }
+            }
+        }
+
+        function selectSeat(seatNumber, element) {
+            // Remove 'selected' class from all available seats
+            document.querySelectorAll('.seat.available').forEach(seat => {
+                seat.classList.remove('selected');
+            });
+            
+            // Add 'selected' class to clicked seat
+            element.classList.add('selected');
+            currentSelectedSeat = seatNumber;
+            updateSeatDisplay();
+        }
+
+        function updateSeatDisplay() {
+            document.getElementById('selectedSeatDisplay').textContent = currentSelectedSeat || "None";
+        }
+
+        async function bookSeat() {
+            const busId = document.getElementById('busSelect').value;
+            const name = document.getElementById('passengerName').value;
+            const phone = document.getElementById('passengerPhone').value;
+
+            if (!busId || !currentSelectedSeat || !name || !phone) {
+                showMessage("Please fill out all details and select a seat.", "error");
+                return;
+            }
+
+            const bookingData = {
+                bus_id: parseInt(busId),
+                seat_number: currentSelectedSeat,
+                passenger_name: name,
+                passenger_phone: phone
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/bookings`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(bookingData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`Success! Booking ID: ${result.booking_reference}`, "success");
+                    // Refresh the seats to show the newly booked seat in red
+                    fetchSeats();
+                    // Clear form
+                    document.getElementById('passengerName').value = '';
+                    document.getElementById('passengerPhone').value = '';
+                } else {
+                    showMessage(result.detail, "error");
+                }
+            } catch (error) {
+                showMessage("An error occurred while booking.", "error");
+            }
+        }
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = type;
+            msgDiv.style.display = 'block';
+            setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+        }
+    </script>
+</body>
+</html>
